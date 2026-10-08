@@ -50,9 +50,15 @@ async def test_application(tmp_path, anyio_backend):  # noqa: ARG001
 
         response = await client.get("/")
         assert response.status_code == 200
+        assert response.headers["Cache-Control"] == "no-cache"
+        assert "hello" in response.text
 
         async with aconnect_ws("/websocket-reload", client) as websocket:
             await index_file.write_text("world")
 
-            data = await websocket.receive_text()
+            data = await websocket.receive_text(timeout=30.0)
             assert data == "refresh"
+
+            response = await client.get("/")
+            assert response.status_code == 200
+            assert "world" in response.text
